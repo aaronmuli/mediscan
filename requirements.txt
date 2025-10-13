@@ -1,0 +1,4 @@
+Flask
+Pillow
+torch==2.5.1
+torchvision
