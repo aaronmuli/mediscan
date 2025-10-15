@@ -1,32 +1,48 @@
 from flask import Flask, render_template, request, url_for
 from werkzeug.utils import secure_filename
 from mediscan import mediscan
+from dotenv import load_dotenv
 import os
 import datetime
 
 app = Flask(__name__)
 
+load_dotenv()
+
 # Configure the upload folder
 UPLOAD_FOLDER = os.path.join('static', 'uploads')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+current_year = datetime.datetime.now().year
 
 # Route for the upload form
 @app.route('/', methods=['GET', 'POST'])
 def upload_image():
     image_url = None
 
-    current_year = datetime.datetime.now().year
+    ALLOWED_IMAGE_MIMETYPES = {
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'image/bmp',
+        'image/tiff',
+        'image/svg+xml',
+        'image/avif'
+    }
 
     if request.method == 'POST':
         # Check if the post request has the file part
         if 'image_file' not in request.files:
-            return "No file part in the form.", 400
+            return render_template('404.html', message="No file part in the form.", current_year=current_year), 400
 
         file = request.files['image_file']
 
         # If the user does not select a file, the browser submits an empty file without a filename
         if file.filename == '':
-            return "No selected file.", 400
+            return render_template('404.html', message="No selected file.", current_year=current_year), 400
+        
+        if file.mimetype not in ALLOWED_IMAGE_MIMETYPES:
+            return render_template('404.html', message="Only Images are allowed", current_year=current_year), 400
 
         if file:
             # Secure the filename to prevent malicious attacks
@@ -62,5 +78,12 @@ def upload_image():
     
     return render_template('index.html', current_year=str(current_year))
 
+@app.errorhandler(404)
+def onError(err):
+    return render_template('404.html', message="Page Not Found", current_year=str(current_year)), 404
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    if os.getenv("FLASK_ENV") == "development":
+        app.run(debug=True, port=5000)
+    else:
+        app.run(port=5000)
