@@ -1,9 +1,13 @@
 from flask import Flask, render_template, request, url_for
 from werkzeug.utils import secure_filename
-from mediscan import mediscan
+from utils.mediscan import mediscan
 from dotenv import load_dotenv
 import os
 import datetime
+import time
+import threading
+
+from utils.remove_image import remove_image
 
 app = Flask(__name__)
 
@@ -13,6 +17,7 @@ load_dotenv()
 UPLOAD_FOLDER = os.path.join('static', 'uploads')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 current_year = datetime.datetime.now().year
+
 
 # Route for the upload form
 @app.route('/', methods=['GET', 'POST'])
@@ -67,6 +72,10 @@ def upload_image():
                 probs["class"] = cls
                 probs["value"] = f"{probabilities[i].item():.4f}"
                 list_probabilities.append(probs)
+
+            timer = threading.Timer(10, remove_image, args=[file_path])
+            print(image_url)
+            timer.start()
 
             return render_template(
                 'index.html',
