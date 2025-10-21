@@ -62,7 +62,7 @@ def upload_image():
             # Get the URL that can be used in the template to display the image
             image_url = url_for('static', filename=f'uploads/{filename}')
             
-            predicted_class, probabilities = mediscan(image_path=file_path)
+            predicted_class, probabilities, confidence_level = mediscan(image_path=file_path)
 
             class_names = ['Normal', 'Abnormal']
             list_probabilities = []
@@ -82,6 +82,7 @@ def upload_image():
                 image_url=image_url,
                 predicted_class=predicted_class,
                 probabilities=list_probabilities,
+                confidence_level=confidence_level,
                 current_year=str(current_year)
             )
     
