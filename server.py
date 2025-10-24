@@ -15,9 +15,12 @@ load_dotenv()
 
 # Configure the upload folder
 UPLOAD_FOLDER = os.path.join('static', 'uploads')
+
+if not os.path.exists(UPLOAD_FOLDER):
+    os.mkdir(UPLOAD_FOLDER)
+
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 current_year = datetime.datetime.now().year
-
 
 # Route for the upload form
 @app.route('/', methods=['GET', 'POST'])
