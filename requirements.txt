@@ -5,4 +5,4 @@ torchvision
 python-dotenv
 gunicorn
 numpy
-cv2
+opencv-python
