@@ -13,19 +13,11 @@ app = Flask(__name__)
 
 load_dotenv()
 
-# Configure the upload folder
-UPLOAD_FOLDER = os.path.join('static', 'uploads')
-
-if not os.path.exists(UPLOAD_FOLDER):
-    os.mkdir(UPLOAD_FOLDER)
-
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 current_year = datetime.datetime.now().year
 
 # Route for the upload form
 @app.route('/', methods=['GET', 'POST'])
 def upload_image():
-    image_url = None
 
     ALLOWED_IMAGE_MIMETYPES = {
         'image/jpeg',
@@ -44,8 +36,8 @@ def upload_image():
             return render_template('404.html', message="No file part in the form.", current_year=current_year), 400
 
         file = request.files['image_file']
-        heatmap_file_path = '' # to display on the frontend
-        heatmap_file = '' # to remove after display
+        # heatmap_file_path = '' # to display on the frontend
+        # heatmap_file = '' # to remove after display
 
         # If the user does not select a file, the browser submits an empty file without a filename
         if file.filename == '':
@@ -55,21 +47,9 @@ def upload_image():
             return render_template('404.html', message="Only Images are allowed", current_year=current_year), 400
 
         if file:
-            # Secure the filename to prevent malicious attacks
-            filename = secure_filename(file.filename)
+            secure_url_og, public_id_og = upload_cloudinary_image(file)
             
-            # Create the full server path for saving the file
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-
-            # Save the file to the uploads folder
-            file.save(file_path)
-
-            secure_url_og, public_id_og = upload_cloudinary_image(file_path)
-            
-            # Get the URL that can be used in the template to display the image
-            image_url = url_for('static', filename=f'uploads/{filename}')
-            
-            predicted_class, probabilities, confidence_level = mediscan(image_path=secure_url_og)
+            predicted_class, probabilities, confidence_level, secure_url_heatmap = mediscan(image_path=secure_url_og)
 
             class_names = ['Normal', 'Abnormal']
             list_probabilities = []
@@ -81,13 +61,13 @@ def upload_image():
                 list_probabilities.append(probs)
             
             
-            heatmap_file_path = url_for('static', filename='uploads/gradcam.jpg')
-            heatmap_file = os.path.join(app.config['UPLOAD_FOLDER'], 'gradcam.jpg')
+            # heatmap_file_path = url_for('static', filename='uploads/gradcam.jpg')
+            # heatmap_file = os.path.join(app.config['UPLOAD_FOLDER'], 'gradcam.jpg')
 
-            secure_url_heatmap, public_id_heatmap = upload_cloudinary_image(heatmap_file)  
+            # secure_url_heatmap, public_id_heatmap = upload_cloudinary_image(heatmap_file)  
 
-            timer = threading.Timer(10, remove_image, args=[[file_path, heatmap_file]])
-            timer.start()
+            # timer = threading.Timer(10, remove_image, args=[[file_path, heatmap_file]])
+            # timer.start()
 
             return render_template(
                 'index.html',
