@@ -8,6 +8,7 @@ import os
 from utils.gradcam import GradCAM
 import cv2
 import numpy as np
+from utils.upload_cloud import upload_cloudinary_image
 
 # Define class names
 definite_class_names = ['Normal', 'Abnormal']
@@ -93,17 +94,27 @@ def evaluate_image(model, image_path, class_names):
     original_cv = cv2.cvtColor(np.array(original_resized), cv2.COLOR_RGB2BGR)
     heatmap_cv = cv2.applyColorMap(np.uint8(255 * heatmap_corrected), cv2.COLORMAP_JET)
     overlay = cv2.addWeighted(original_cv, 0.6, heatmap_cv, 0.4, 0)
-    
-    # Ensure directory and save
-    os.makedirs(os.path.dirname(heatmap_image_path), exist_ok=True)
-    cv2.imwrite(heatmap_image_path, overlay)
 
-    return predicted_class, prob_final
+    # 1. Encode the OpenCV image (numpy array) to a JPEG buffer in memory
+    is_success, buffer = cv2.imencode(".jpg", overlay)
+    
+    if is_success:
+        # 2. Create a BytesIO object which acts like a file
+        io_buf = BytesIO(buffer)
+        io_buf.name = 'gradcam_heatmap.jpg' # Giving it a name helps Cloudinary identify the type
+
+        # 3. Upload directly
+        secure_url_heatmap, public_id_heatmap = upload_cloudinary_image(io_buf)
+    else:
+        # Fallback if encoding fails
+        secure_url_heatmap = None
+
+    return predicted_class, prob_final, secure_url_heatmap
 
 def mediscan(image_path):
     compare_model_path = "./models/adults_vs_peads_cxrs_model.pth"
     compare_model = load_model(compare_model_path, compare_class_names)
-    age_class, _ = evaluate_image(compare_model, image_path, compare_class_names)
+    age_class, _, _ = evaluate_image(compare_model, image_path, compare_class_names)
 
     if age_class == "Adults":
         model_path = "./models/adults_cxrs_model.pth"
@@ -113,7 +124,7 @@ def mediscan(image_path):
         raise ValueError("Unexpected age classification")
 
     definite_model = load_model(model_path, definite_class_names)
-    predicted_class, probabilities = evaluate_image(definite_model, image_path, definite_class_names)
+    predicted_class, probabilities, secure_url_heatmap = evaluate_image(definite_model, image_path, definite_class_names)
     confidence_level = calculate_confidence_margin(probabilities)
 
-    return predicted_class, probabilities, confidence_level
+    return predicted_class, probabilities, confidence_level, secure_url_heatmap
