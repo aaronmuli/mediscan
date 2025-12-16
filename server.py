@@ -1,12 +1,12 @@
 from flask import Flask, render_template, request, url_for
 from werkzeug.utils import secure_filename
-from utils.mediscan import mediscan
 from dotenv import load_dotenv
 import os
 import datetime
-from utils.cloudinary import upload_cloudinary_image
 import threading
 
+from utils.mediscan import mediscan
+from utils.upload_cloud import upload_cloudinary_image
 from utils.remove_image import remove_image
 
 app = Flask(__name__)
