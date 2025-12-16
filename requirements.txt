@@ -1,5 +1,5 @@
 Flask
 Pillow
-torch==2.5.1
+torch
 torchvision
 python-dotenv
