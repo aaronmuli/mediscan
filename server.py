@@ -4,7 +4,7 @@ from utils.mediscan import mediscan
 from dotenv import load_dotenv
 import os
 import datetime
-import time
+from utils.cloudinary import upload_cloudinary_image
 import threading
 
 from utils.remove_image import remove_image
@@ -63,11 +63,13 @@ def upload_image():
 
             # Save the file to the uploads folder
             file.save(file_path)
+
+            secure_url_og, public_id_og = upload_cloudinary_image(file_path)
             
             # Get the URL that can be used in the template to display the image
             image_url = url_for('static', filename=f'uploads/{filename}')
             
-            predicted_class, probabilities, confidence_level = mediscan(image_path=file_path)
+            predicted_class, probabilities, confidence_level = mediscan(image_path=secure_url_og)
 
             class_names = ['Normal', 'Abnormal']
             list_probabilities = []
@@ -82,13 +84,15 @@ def upload_image():
             heatmap_file_path = url_for('static', filename='uploads/gradcam.jpg')
             heatmap_file = os.path.join(app.config['UPLOAD_FOLDER'], 'gradcam.jpg')
 
+            secure_url_heatmap, public_id_heatmap = upload_cloudinary_image(heatmap_file)  
+
             timer = threading.Timer(10, remove_image, args=[[file_path, heatmap_file]])
             timer.start()
 
             return render_template(
                 'index.html',
-                heatmap_image=heatmap_file_path,
-                image_url=image_url,
+                heatmap_image=secure_url_heatmap,
+                image_url=secure_url_og,
                 predicted_class=predicted_class,
                 probabilities=list_probabilities,
                 confidence_level=confidence_level,
