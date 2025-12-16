@@ -7,3 +7,4 @@ gunicorn
 numpy
 opencv-python
 cloudinary
+requests
