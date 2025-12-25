@@ -1,13 +1,13 @@
-from flask import Flask, render_template, request, url_for
-from werkzeug.utils import secure_filename
+from flask import Flask, render_template, request
 from dotenv import load_dotenv
+from PIL import Image
 import os
 import datetime
-import threading
+import base64
+import io
 
 from utils.mediscan import mediscan
-from utils.upload_cloud import upload_cloudinary_image
-from utils.remove_image import remove_image
+
 
 app = Flask(__name__)
 
@@ -36,8 +36,6 @@ def upload_image():
             return render_template('404.html', message="No file part in the form.", current_year=current_year), 400
 
         file = request.files['image_file']
-        # heatmap_file_path = '' # to display on the frontend
-        # heatmap_file = '' # to remove after display
 
         # If the user does not select a file, the browser submits an empty file without a filename
         if file.filename == '':
@@ -47,9 +45,17 @@ def upload_image():
             return render_template('404.html', message="Only Images are allowed", current_year=current_year), 400
 
         if file:
-            secure_url_og, public_id_og = upload_cloudinary_image(file)
+            original_image = Image.open(file).convert('RGB')
             
-            predicted_class, probabilities, confidence_level, secure_url_heatmap = mediscan(image_path=secure_url_og)
+            source_original = original_image
+            buffered_original = io.BytesIO()
+            source_original.save(buffered_original, format='PNG')
+            image_bytes = buffered_original.getvalue()
+            original_encoded_image = f"data:image/png;base64,{base64.b64encode(image_bytes).decode('utf-8')}"
+
+            predicted_class, probabilities, confidence_level, source = mediscan(x_ray=original_image)
+            image_bytes = source.getvalue()
+            heatmap_encoded_image = f"data:image/png;base64,{base64.b64encode(image_bytes).decode('utf-8')}"
 
             class_names = ['Normal', 'Abnormal']
             list_probabilities = []
@@ -60,24 +66,16 @@ def upload_image():
                 probs["value"] = f"{probabilities[i].item():.4f}"
                 list_probabilities.append(probs)
             
-            
-            # heatmap_file_path = url_for('static', filename='uploads/gradcam.jpg')
-            # heatmap_file = os.path.join(app.config['UPLOAD_FOLDER'], 'gradcam.jpg')
-
-            # secure_url_heatmap, public_id_heatmap = upload_cloudinary_image(heatmap_file)  
-
-            # timer = threading.Timer(10, remove_image, args=[[file_path, heatmap_file]])
-            # timer.start()
-
             return render_template(
                 'index.html',
-                heatmap_image=secure_url_heatmap,
-                image_url=secure_url_og,
+                heatmap_image=heatmap_encoded_image,
+                image_url=original_encoded_image,
                 predicted_class=predicted_class,
                 probabilities=list_probabilities,
                 confidence_level=confidence_level,
-                current_year=str(current_year)
+                current_year=str(current_year),
             )
+
     return render_template('index.html', current_year=str(current_year))
 
 @app.errorhandler(404)
