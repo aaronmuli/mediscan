@@ -66,9 +66,9 @@
                 <div>
                     <h3 class="text-xl font-medium mb-2">Analysis Predictions</h3>
                     {% if predicted_class == "Normal" %}
-                        <p class="text-lg"><span class="font-semibold">Predicted Class: </span><span class="text-green-500">It appears {{ predicted_class }}, but see a doctor.</span></p>
+                        <p class="text-lg"><span class="font-semibold">Prediction: </span><span class="text-green-500">It appears {{ predicted_class }}, but see a doctor.</span></p>
                     {% else %}
-                        <p class="text-lg"><span class="font-semibold">Predicted Class: </span><span class="text-red-500">It appears {{ predicted_class }}, but see a doctor.</span></p>
+                        <p class="text-lg"><span class="font-semibold">Prediction: </span><span class="text-red-500">It appears {{ predicted_class }}, but see a doctor.</span></p>
                     {% endif %}
                     <p class="text-lg"><span class="font-semibold">Confidence Level: </span><span class="font-bold">{{ confidence_level }}%</span></p>
                     <h4 class="text-lg font-medium mt-4 mb-2">Probabilities:</h4>

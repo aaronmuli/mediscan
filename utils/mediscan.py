@@ -1,14 +1,9 @@
 from io import BytesIO
-import requests 
 import torch
 from torchvision import models, transforms
-from torchvision.transforms import functional as TF  # For hflip
-from PIL import Image
-import os
 from utils.gradcam import GradCAM
 import cv2
 import numpy as np
-from utils.upload_cloud import upload_cloudinary_image
 
 # Define class names
 definite_class_names = ['Normal', 'Abnormal']
@@ -45,20 +40,19 @@ def load_model(model_path, class_names):
     model.eval()
     return model
 
-def download_image_from_url(image_url):
-    try:
-        response = requests.get(image_url, timeout=15)
-        response.raise_for_status()  # Raise HTTPError for bad responses
-        image_bytes = BytesIO(response.content)
-        image = Image.open(image_bytes).convert('RGB')
-        return image
-    except requests.RequestException as e:
-        raise ConnectionError(f"Failed to download image from {image_url}: {e}")
-    except Exception as e:
-        raise ValueError(f"Invalid image data from {image_url}: {e}")
+def differentiate_image(model, original_image, class_names):
+    tensor_orig = eval_transform(original_image).unsqueeze(0).to(device)
+    with torch.no_grad():
+        output_orig = model(tensor_orig)
+        prob_orig = torch.softmax(output_orig, dim=1)[0]
 
-def evaluate_image(model, image_path, class_names):
-    original_image = download_image_from_url(image_path)
+    predicted_idx = torch.argmax(prob_orig).item()
+    predicted_class = class_names[predicted_idx]
+
+    return predicted_class
+
+def evaluate_image(model, x_ray, class_names):
+    original_image = x_ray
     
     # === Original inference ===
     tensor_orig = eval_transform(original_image).unsqueeze(0).to(device)
@@ -66,55 +60,30 @@ def evaluate_image(model, image_path, class_names):
         output_orig = model(tensor_orig)
         prob_orig = torch.softmax(output_orig, dim=1)[0]
     
-    # === Flipped inference ===
-    flipped_image = TF.hflip(original_image)
-    tensor_flip = eval_transform(flipped_image).unsqueeze(0).to(device)
-    with torch.no_grad():
-        output_flip = model(tensor_flip)
-        prob_flip = torch.softmax(output_flip, dim=1)[0]
-    
-    # === Final prediction: average probabilities ===
-    prob_final = (prob_orig + prob_flip) / 2
-    predicted_idx = torch.argmax(prob_final).item()
+    predicted_idx = torch.argmax(prob_orig).item()
     predicted_class = class_names[predicted_idx]
 
     # === ALWAYS generate Grad-CAM heatmap ===
-    # Use flipped version for better heatmap quality due to bias
     target_layer = model.layer3[0].conv2  # Your chosen layer
     gradcam = GradCAM(model, target_layer)
-    heatmap_flip = gradcam.generate_heatmap(tensor_flip, predicted_idx)
-    
-    heatmap_flip_np = heatmap_flip.squeeze().cpu().numpy()
-    
-    # Flip heatmap back to original orientation
-    heatmap_corrected = np.fliplr(heatmap_flip_np)
+    heatmap = gradcam.generate_heatmap(tensor_orig, predicted_idx)
+    heatmap_np = heatmap.squeeze().cpu().numpy()
     
     # Overlay on ORIGINAL image (224x224)
     original_resized = original_image.resize((224, 224))
     original_cv = cv2.cvtColor(np.array(original_resized), cv2.COLOR_RGB2BGR)
-    heatmap_cv = cv2.applyColorMap(np.uint8(255 * heatmap_corrected), cv2.COLORMAP_JET)
+    heatmap_cv = cv2.applyColorMap(np.uint8(255 * heatmap_np), cv2.COLORMAP_JET)
     overlay = cv2.addWeighted(original_cv, 0.6, heatmap_cv, 0.4, 0)
 
-    # 1. Encode the OpenCV image (numpy array) to a JPEG buffer in memory
-    is_success, buffer = cv2.imencode(".jpg", overlay)
-    
-    if is_success:
-        # 2. Create a BytesIO object which acts like a file
-        io_buf = BytesIO(buffer)
-        io_buf.name = 'gradcam_heatmap.jpg' # Giving it a name helps Cloudinary identify the type
+    _ , buffer = cv2.imencode(".jpg", overlay)
+    io_buf = BytesIO(buffer)
 
-        # 3. Upload directly
-        secure_url_heatmap, public_id_heatmap = upload_cloudinary_image(io_buf)
-    else:
-        # Fallback if encoding fails
-        secure_url_heatmap = None
+    return predicted_class, prob_orig, io_buf
 
-    return predicted_class, prob_final, secure_url_heatmap
-
-def mediscan(image_path):
+def mediscan(x_ray):
     compare_model_path = "./models/adults_vs_peads_cxrs_model.pth"
     compare_model = load_model(compare_model_path, compare_class_names)
-    age_class, _, _ = evaluate_image(compare_model, image_path, compare_class_names)
+    age_class = differentiate_image(compare_model, x_ray, compare_class_names)
 
     if age_class == "Adults":
         model_path = "./models/adults_cxrs_model.pth"
@@ -124,7 +93,7 @@ def mediscan(image_path):
         raise ValueError("Unexpected age classification")
 
     definite_model = load_model(model_path, definite_class_names)
-    predicted_class, probabilities, secure_url_heatmap = evaluate_image(definite_model, image_path, definite_class_names)
+    predicted_class, probabilities, heatmap = evaluate_image(definite_model, x_ray, definite_class_names)
     confidence_level = calculate_confidence_margin(probabilities)
 
-    return predicted_class, probabilities, confidence_level, secure_url_heatmap
+    return predicted_class, probabilities, confidence_level, heatmap
