@@ -17,4 +17,4 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         # Replace 'username/space-name' with your actual HF info
-        run: git push --force https://$HF_TOKEN@huggingface.co/spaces/aaronmuli/mediscan main
+        run: git push --force https://aaronmuli:$HF_TOKEN@huggingface.co/spaces/aaronmuli/mediscan main
