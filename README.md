@@ -5,7 +5,7 @@ colorFrom: blue
 colorTo: indigo
 sdk: gradio # or streamlit / docker
 sdk_version: 4.0.0
-app_file: app.py
+app_file: server.py
 pinned: false
 ---
 
