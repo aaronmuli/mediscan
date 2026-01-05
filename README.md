@@ -1,3 +1,14 @@
+---
+title: X-Ray Analysis Project
+emoji: 🩻
+colorFrom: blue
+colorTo: indigo
+sdk: gradio # or streamlit / docker
+sdk_version: 4.0.0
+app_file: app.py
+pinned: false
+---
+
 #Mediscan: X-Ray Analysis Tool
 Mediscan is a web application built with Flask that allows users to upload medical X-ray images for automated classification and analysis. It utilizes a pre-trained Deep Learning model (e.g., a CNN) to predict the class of the X-ray (e.g., 'normal' or 'abnormal') and provides confidence probabilities.
 
