@@ -10,6 +10,7 @@
     <style>
         body {
             font-family: 'Roboto Mono', monospace;
+            min-height: 100vh;
         }
         #loading-screen {
             display: none;
@@ -41,73 +42,97 @@
     <div id="loading-screen">
         <div class="loader"></div>
     </div>
+
     <header class="bg-blue-600 text-white py-6">
-        <div class="container mx-auto px-4">
+        <div class="container mx-auto px-4 max-w-5xl">
             <h1 class="text-3xl font-bold">Mediscan</h1>
             <p class="mt-2 text-lg">Upload Chest X-Ray Images for Instant Analysis</p>
         </div>
     </header>
 
-    <main class=" mx-auto px-4 py-8 ">
+    <main class="flex-1 container mx-auto py-8">
         <section class="bg-white rounded-lg shadow-md p-6 mb-8">
             <h2 class="text-2xl font-semibold mb-4">Upload Chest X-Ray Image</h2>
             <form action="/" method="post" enctype="multipart/form-data" class="flex flex-col sm:flex-row gap-4" onsubmit="showLoading()">
-                <input type="file" name="image_file" accept="image/*" class="border border-gray-300 rounded-md p-2 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-500 file:text-white hover:file:bg-blue-600">
-                <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 transition-colors">Analyze</button>
+                <input type="file" name="image_file" accept="image/*" class="flex-1 border border-gray-300 rounded-md p-2 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-500 file:text-white hover:file:bg-blue-600">
+                <button type="submit" class="bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-600 transition-colors font-medium">Analyze</button>
             </form>
         </section>
 
         {% if image_url %}
         <hr class="my-8 border-gray-300">
-        <section class="bg-white rounded-lg shadow-md p-6 justify-center items-center">
-            <h2 class="text-2xl font-semibold mb-4">Analysis Results</h2>
 
-            <div class="flex flex-col lg:flex-row gap-2">
-                <div>
-                    <h3 class="text-xl font-medium mb-2">Analysis Predictions</h3>
+        <section class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-semibold mb-6">Analysis Results</h2>
+
+            <div class="flex flex-col lg:flex-row gap-8">
+                <!-- Predictions column -->
+                <div class="flex-1">
+                    <h3 class="text-xl font-medium mb-4">Analysis Predictions</h3>
                     {% if predicted_class == "Normal" %}
-                        <p class="text-lg"><span class="font-semibold">Prediction: </span><span class="text-green-500">It appears {{ predicted_class }}, but see a doctor.</span></p>
+                        <p class="text-lg mb-2"><span class="font-semibold">Prediction: </span><span class="text-green-500">It appears {{ predicted_class }}, but see a doctor.</span></p>
                     {% else %}
-                        <p class="text-lg"><span class="font-semibold">Prediction: </span><span class="text-red-500">It appears {{ predicted_class }}, but see a doctor.</span></p>
+                        <p class="text-lg mb-2"><span class="font-semibold">Prediction: </span><span class="text-red-500">It appears {{ predicted_class }}, but see a doctor.</span></p>
                     {% endif %}
-                    <p class="text-lg"><span class="font-semibold">Confidence Level: </span><span class="font-bold">{{ confidence_level }}%</span></p>
-                    <h4 class="text-lg font-medium mt-4 mb-2">Probabilities:</h4>
-                    <ul class="list-disc pl-5">
+                    <p class="text-lg mb-4"><span class="font-semibold">Confidence Level: </span><span class="font-bold">{{ confidence_level }}%</span></p>
+
+                    <h4 class="text-lg font-medium mb-2">Probabilities:</h4>
+                    <ul class="list-disc pl-6 space-y-1">
                         {% for prob in probabilities %}
                             <li>{{ prob["class"] }}: {{ prob["value"] }}</li>
                         {% endfor %}
                     </ul>
                 </div>
-                <div>
-                    <h3 class="text-xl font-medium mb-2">Preview</h3>
-                    <div class="flex md:flex-row flex-col gap-5 items-center lg:items-start w-full">
-                        <div>
-                            <p>original</p>
-                            <img src="{{ image_url }}" alt="Uploaded Image" class="w-[350px] h-[300px] rounded-md border border-gray-200 shadow-sm">
+
+                <!-- Images column -->
+                <div class="flex-1">
+                    <h3 class="text-xl font-medium mb-4">Preview</h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div class="text-center">
+                            <p class="font-medium mb-3">Original</p>
+                            <img src="{{ image_url }}" alt="Uploaded Image" class="w-full md:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto rounded-md border border-gray-200 shadow-sm object-contain bg-gray-50">
                         </div>
-                        <div>
-                            <p>heatmap</p>
-                            <img src="{{ heatmap_image }}" alt="Uploaded Heatmap Image" class="w-[350px] h-[300px] rounded-md border border-gray-200 shadow-sm">
+                        <div class="text-center">
+                            <p class="font-medium mb-3">Heatmap</p>
+                            <img src="{{ heatmap_image }}" alt="Uploaded Heatmap Image" class="w-full md:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto rounded-md border border-gray-200 shadow-sm object-contain bg-gray-50">
                         </div>
                     </div>
-                    <div class="flex flex-col items-center pt-6">
-                        <h1 class="text-xl font-medium mb-2">Heatmap Key</h1>
-                        <img src="../static/heatmap_key.jpg" alt="Heatmap Key" height="50%">
-                        <p>Red: High model attention</p>
-                        <p>Blue: Low model attention</p>
+
+                    <div class="mt-12 text-center">
+                        <h4 class="text-xl font-medium mb-4">Heatmap Key</h4>
+                        <div class="w-full max-w-3xl mx-auto px-8">
+                            <svg viewBox="0 0 800 120" class="w-full h-auto rounded-lg border border-gray-300 shadow-md bg-white">
+                                <defs>
+                                    <linearGradient id="jetGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="#00008b"/>   <!-- Dark blue -->
+                                        <stop offset="15%" stop-color="#0000ff"/>  <!-- Blue -->
+                                        <stop offset="35%" stop-color="#00ffff"/>  <!-- Cyan -->
+                                        <stop offset="50%" stop-color="#00ff00"/>  <!-- Green -->
+                                        <stop offset="65%" stop-color="#ffff00"/>  <!-- Yellow -->
+                                        <stop offset="85%" stop-color="#ff0000"/>  <!-- Red -->
+                                        <stop offset="100%" stop-color="#8b0000"/> <!-- Dark red -->
+                                    </linearGradient>
+                                </defs>
+                                <rect x="40" y="30" width="720" height="60" fill="url(#jetGradient)" rx="12"/>
+                            </svg>
+                        </div>
+                        <p class="mt-4 text-sm text-gray-600">Blue: Low model attention</p>
+                        <p class="mt-4 text-sm text-gray-600">Red: High model attention</p>
                     </div>
                 </div>
             </div>
-            <div class="pt-6">
-                <h3 class="text-xl font-medium mb-2">Disclaimer</h3>
-                <p>The heatmap highlights regions the AI model focused on for its prediction and is for informational purposes only. It is not a medical diagnosis or substitute for professional healthcare advice—always consult a qualified radiologist or physician for accurate interpretation and treatment.</p>
+
+            <div class="mt-12 pt-8 border-t border-gray-200">
+                <h3 class="text-xl font-medium mb-3">Disclaimer</h3>
+                <p class="text-gray-700 leading-relaxed">The heatmap highlights regions the AI model focused on for its prediction and is for informational purposes only. It is not a medical diagnosis or substitute for professional healthcare advice—always consult a qualified radiologist or physician for accurate interpretation and treatment.</p>
             </div>
         </section>
         {% endif %}
     </main>
 
-    <footer class="bg-gray-800 text-white py-4">
-        <div class="container mx-auto px-4 text-center">
+    <footer class="bg-gray-800 text-white py-4 mt-auto">
+        <div class="container mx-auto px-4 text-center max-w-5xl">
             <p>&copy; <span>{{ current_year }}</span> Mediscan. All rights reserved.</p>
         </div>
     </footer>
