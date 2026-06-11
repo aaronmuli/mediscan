@@ -75,6 +75,7 @@ def evaluate_image(model, x_ray, class_names):
     heatmap_cv = cv2.applyColorMap(np.uint8(255 * heatmap_np), cv2.COLORMAP_JET)
     overlay = cv2.addWeighted(original_cv, 0.6, heatmap_cv, 0.4, 0)
 
+    overlay = cv2.resize(overlay, original_image.size)  # Resize back to original image size
     _ , buffer = cv2.imencode(".jpg", overlay)
     io_buf = BytesIO(buffer)
 
@@ -95,5 +96,7 @@ def mediscan(x_ray):
     definite_model = load_model(model_path, definite_class_names)
     predicted_class, probabilities, heatmap = evaluate_image(definite_model, x_ray, definite_class_names)
     confidence_level = calculate_confidence_margin(probabilities)
+    
+    # heatmap = heatmap.resize(x_ray.size)  # Resize heatmap to match original image size
 
     return predicted_class, probabilities, confidence_level, heatmap
